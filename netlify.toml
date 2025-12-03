@@ -1,0 +1,405 @@
+# Netlify Configuration for AI Marketing Engine
+# This file configures deployment settings, redirects, headers, and build process
+
+[build]
+  # Build command and output directory
+  command = "npm run build"
+  publish = "dist"
+  
+  # Environment variables for build
+  environment = { NODE_VERSION = "18", NPM_VERSION = "9" }
+
+[build.processing]
+  # Skip processing of already optimized files
+  skip_processing = false
+
+[build.processing.css]
+  # CSS optimization
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  # JavaScript optimization
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  # HTML optimization
+  pretty_urls = true
+
+[build.processing.images]
+  # Image optimization
+  compress = true
+
+# ==========================================
+# REDIRECTS FOR SPA ROUTING
+# ==========================================
+
+[[redirects]]
+  # SPA fallback - serve index.html for client-side routing
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  conditions = { Role = ["admin", "user"] }
+
+[[redirects]]
+  # API proxy to prevent CORS issues in development
+  from = "/api/*"
+  to = "https://api.aimarketingengine.com/:splat"
+  status = 200
+
+[[redirects]]
+  # WhatsApp API proxy
+  from = "/whatsapp-api/*"
+  to = "https://graph.facebook.com/:splat"
+  status = 200
+  headers = { Authorization = "Bearer WHATSAPP_ACCESS_TOKEN" }
+
+[[redirects]]
+  # Benchmark API proxy
+  from = "/benchmark-api/*"
+  to = "https://api.benchmarkintelligence.com/:splat"
+  status = 200
+
+# Old URL redirects for SEO
+[[redirects]]
+  from = "/old-dashboard"
+  to = "/dashboard"
+  status = 301
+
+[[redirects]]
+  from = "/reports"
+  to = "/analytics"
+  status = 301
+
+# ==========================================
+# SECURITY HEADERS
+# ==========================================
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    
+    # Content Security Policy
+    Content-Security-Policy = """
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' 
+        https://www.google-analytics.com 
+        https://www.googletagmanager.com
+        https://cdn.jsdelivr.net
+        https://unpkg.com;
+      style-src 'self' 'unsafe-inline'
+        https://fonts.googleapis.com
+        https://cdn.jsdelivr.net;
+      font-src 'self'
+        https://fonts.gstatic.com
+        https://cdn.jsdelivr.net;
+      img-src 'self' data: https:;
+      connect-src 'self'
+        https://api.aimarketingengine.com
+        https://graph.facebook.com
+        https://api.benchmarkintelligence.com
+        https://www.google-analytics.com;
+      media-src 'self';
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'none';
+      upgrade-insecure-requests;
+    """
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    # API specific headers
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    # JavaScript caching
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    # CSS caching
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    # Image caching
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    # Service Worker headers
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    # PWA manifest headers
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "application/manifest+json"
+
+# ==========================================
+# EDGE FUNCTIONS (if needed)
+# ==========================================
+
+[[edge_functions]]
+  function = "analytics"
+  path = "/api/analytics/*"
+
+[[edge_functions]]
+  function = "auth"
+  path = "/api/auth/*"
+
+# ==========================================
+# FORMS (for contact/feedback)
+# ==========================================
+
+[forms]
+  # Contact form
+  [forms.contact]
+    name = "contact"
+    action = "/thank-you"
+    
+  # Bug report form
+  [forms.bug-report]
+    name = "bug-report"
+    action = "/bug-report-submitted"
+
+# ==========================================
+# PLUGINS
+# ==========================================
+
+[[plugins]]
+  # Netlify plugin for Essential Next.js Build Plugin
+  package = "@netlify/plugin-nextjs"
+
+[[plugins]]
+  # A11y plugin for accessibility testing
+  package = "netlify-plugin-a11y"
+  
+  [plugins.inputs]
+    checkPaths = ['/dashboard', '/benchmarks', '/analytics']
+
+[[plugins]]
+  # Lighthouse plugin for performance monitoring
+  package = "netlify-plugin-lighthouse"
+  
+  [plugins.inputs]
+    audits = ['performance', 'accessibility', 'best-practices', 'seo']
+
+[[plugins]]
+  # Sitemap generation
+  package = "netlify-plugin-sitemap"
+  
+  [plugins.inputs]
+    baseUrl = "https://app.aimarketingengine.com"
+
+# ==========================================
+# ENVIRONMENT VARIABLES
+# ==========================================
+
+[context.production]
+  environment = { 
+    NODE_ENV = "production",
+    VITE_APP_ENV = "production",
+    VITE_API_BASE_URL = "https://api.aimarketingengine.com/v1"
+  }
+
+[context.staging]
+  environment = { 
+    NODE_ENV = "staging",
+    VITE_APP_ENV = "staging",
+    VITE_API_BASE_URL = "https://staging-api.aimarketingengine.com/v1"
+  }
+
+[context.deploy-preview]
+  environment = { 
+    NODE_ENV = "development",
+    VITE_APP_ENV = "development",
+    VITE_API_BASE_URL = "https://dev-api.aimarketingengine.com/v1"
+  }
+
+# ==========================================
+# BRANCH DEPLOYS
+# ==========================================
+
+[context.main]
+  command = "npm run build"
+  environment = { VITE_APP_ENV = "production" }
+
+[context.develop]
+  command = "npm run build"
+  environment = { VITE_APP_ENV = "staging" }
+
+# ==========================================
+# FUNCTIONS (Serverless)
+# ==========================================
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# ==========================================
+# SPLIT TESTING (A/B Testing)
+# ==========================================
+
+[split_testing]
+  # Test voice commands feature
+  [[split_testing.experiments]]
+    id = "voice-commands-test"
+    name = "Voice Commands Feature Test"
+    percentage = 50
+    variation_a = "/dashboard"
+    variation_b = "/dashboard?voice=enabled"
+
+# ==========================================
+# NOTIFICATIONS
+# ==========================================
+
+[notifications]
+  # Email notifications for deploy status
+  email = "admin@aimarketingengine.com"
+  
+  # Slack notifications
+  slack = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+# ==========================================
+# ANALYTICS
+# ==========================================
+
+[analytics]
+  provider = "google"
+  google = {
+    measurement_id = "G-XXXXXXXXXX"
+  }
+
+# ==========================================
+# PERFORMANCE BUDGETS
+# ==========================================
+
+[build.performance_budget]
+  # Bundle size limits
+  bundle_size = "1MB"
+  
+  # Performance metrics
+  [build.performance_budget.metrics]
+    first_contentful_paint = 1500
+    largest_contentful_paint = 2500
+    first_input_delay = 100
+    cumulative_layout_shift = 0.1
+
+# ==========================================
+# OPTIMIZATION
+# ==========================================
+
+[build.optimization]
+  # Image optimization
+  [build.optimization.images]
+    auto_avif = true
+    auto_webp = true
+    
+  # Asset optimization
+  [build.optimization.css]
+    minify = true
+    critical = true
+    
+  [build.optimization.js]
+    minify = true
+    compress = true
+
+# ==========================================
+# CUSTOM HEADERS FOR SPECIFIC ROUTES
+# ==========================================
+
+[[headers]]
+  for = "/dashboard"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+    Cache-Control = "private, no-cache"
+
+[[headers]]
+  for = "/analytics"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+    Cache-Control = "private, no-cache"
+
+# ==========================================
+# ERROR PAGES
+# ==========================================
+
+[[redirects]]
+  from = "/404"
+  to = "/error/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/500"
+  to = "/error/500.html"
+  status = 500
+
+# ==========================================
+# PRERENDERING (for SEO)
+# ==========================================
+
+[build.prerender]
+  # Prerender these routes for better SEO
+  paths = ["/", "/about", "/features"]
+
+# ==========================================
+# LARGE MEDIA (Git LFS)
+# ==========================================
+
+[large_media]
+  # Track large files with Git LFS
+  track = "*.png"
+  track = "*.jpg"
+  track = "*.jpeg"
+  track = "*.gif"
+  track = "*.svg"
+  track = "*.mp4"
+  track = "*.webm"
+
+# ==========================================
+# IDENTITY (Authentication)
+# ==========================================
+
+[identity]
+  # Enable Netlify Identity
+  enabled = true
+  
+  # External providers
+  external_providers = ["google", "facebook"]
+  
+  # Email templates
+  [identity.email]
+    confirmation_template = "confirmation"
+    invitation_template = "invitation"
+    recovery_template = "recovery"
+    email_change_template = "email_change"
